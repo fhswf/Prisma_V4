@@ -24,7 +24,6 @@
 #include "leds.h"
 #include <stdio.h>
 
-#define LEDRING_CNT 24						// Number of Neopixel LEDs in Ring
 #define PI 3.14159265					t
 
 #define SGN(x) ((x>0)-(x<0))

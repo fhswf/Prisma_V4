@@ -26,6 +26,7 @@ float foc_getAngle();
 float foc_electric_angle();
 float foc_getVelocity();
 void foc_loop();
+void foc_error();
 
 
 #endif

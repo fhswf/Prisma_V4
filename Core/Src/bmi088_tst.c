@@ -85,7 +85,7 @@ float get_angle()
 	angle = angle_filter(angle, gyro.gz);
 }
 
-void main_bmi()
+void bmi_init()
 {
   int status;
   uint16_t irq_cnt_i;
@@ -134,7 +134,9 @@ void main_bmi()
   printf("BMI088 init done\r\n");
   HAL_Delay(3);
   bmi088_is_initialized = 1;
+}
 
+/*
 
   int inten=0;
 
@@ -186,4 +188,4 @@ void main_bmi()
     	  HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
       }
   }
-}
+}*/

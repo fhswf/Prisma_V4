@@ -40,10 +40,11 @@ float angle_filter(float accel_angle, float gyro_rate)
     // Kalman-Gewichte berechnen
     float S = P[0][0] + R_MEASURE; // Innovationskovarianz
     float K[2]; // Kalman-Gewichte
-
+    if (S!=0)
+    {
     K[0] = P[0][0] / S;
     K[1] = P[1][0] / S;
-
+    }
     // Korrigierter Wert
     float y = accel_angle - angle;
     angle += K[0] * y;

@@ -25,10 +25,8 @@
  *  TIM2  - Timebase for Microsecond measurement, running at 100 kHz -> 10us
  *          32 Bit Timer -> 2^32 / 100 kHz -> Overflow after 11 hours
  *  TIM3  - Motor PWM
- *  TIM6  - Motor RPM calculation
- *  TIM7  - NeoPixel periodic update
  *  TIM8  - NeoPixel PWM/DMA LED
- *  TIM17 - 100Hz control loop (and optionally LED1 dimming)
+ *  TIM6 - 100Hz control loop (and optionally LED1 dimming)
  */
 
 //Lorem
@@ -53,7 +51,7 @@ extern I2C_HandleTypeDef hi2c1;
 void main_bmi(); //read sensor
 void foc_test();
 uint16_t TouchSense3();	//ok
-
+void ctrlloop();
 
 void main_user(void)
 {
@@ -98,10 +96,11 @@ void main_user(void)
     	HAL_Delay(200);
     }
 */
+    //captouch_test();
     foc_init();
-    foc_test();
+    //foc_test();
 
-    main_bmi();
+    ctrlloop();
 
     while(1)
 	{

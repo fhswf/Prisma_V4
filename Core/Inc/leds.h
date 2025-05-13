@@ -23,6 +23,7 @@ typedef struct
 #define LED_TMR_CH   TIM_CHANNEL_1
 #define LED_TMR_USE_CHN
 #define LED_TMR_UPD  htim7
+#define LEDRING_CNT 24						// Number of Neopixel LEDs in Ring
 
 #define RGB(a,b,c)  {c,a,b}
 

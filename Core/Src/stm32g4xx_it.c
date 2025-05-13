@@ -56,11 +56,11 @@
 
 /* External variables --------------------------------------------------------*/
 extern PCD_HandleTypeDef hpcd_USB_FS;
-extern DMA_HandleTypeDef hdma_adc1;
 extern DMA_HandleTypeDef hdma_adc2;
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 extern DMA_HandleTypeDef hdma_tim8_ch1;
+extern TIM_HandleTypeDef htim6;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -94,6 +94,13 @@ void HardFault_Handler(void)
   while (1)
   {
     /* USER CODE BEGIN W1_HardFault_IRQn 0 */
+	  __disable_irq();
+	  HAL_GPIO_WritePin(BT_PWRN_GPIO_Port, BT_PWRN_Pin, GPIO_PIN_SET);	// active low
+
+	  while (1)
+	  {
+		  sos_error();
+	  }
     /* USER CODE END W1_HardFault_IRQn 0 */
   }
 }
@@ -109,6 +116,13 @@ void MemManage_Handler(void)
   while (1)
   {
     /* USER CODE BEGIN W1_MemoryManagement_IRQn 0 */
+	  __disable_irq();
+	  HAL_GPIO_WritePin(BT_PWRN_GPIO_Port, BT_PWRN_Pin, GPIO_PIN_SET);	// active low
+
+	  while (1)
+	  {
+		  sos_error();
+	  }
     /* USER CODE END W1_MemoryManagement_IRQn 0 */
   }
 }
@@ -124,6 +138,13 @@ void BusFault_Handler(void)
   while (1)
   {
     /* USER CODE BEGIN W1_BusFault_IRQn 0 */
+	  __disable_irq();
+	  HAL_GPIO_WritePin(BT_PWRN_GPIO_Port, BT_PWRN_Pin, GPIO_PIN_SET);	// active low
+
+	  while (1)
+	  {
+		  sos_error();
+	  }
     /* USER CODE END W1_BusFault_IRQn 0 */
   }
 }
@@ -139,6 +160,13 @@ void UsageFault_Handler(void)
   while (1)
   {
     /* USER CODE BEGIN W1_UsageFault_IRQn 0 */
+	  __disable_irq();
+	  HAL_GPIO_WritePin(BT_PWRN_GPIO_Port, BT_PWRN_Pin, GPIO_PIN_SET);	// active low
+
+	  while (1)
+	  {
+		  sos_error();
+	  }
     /* USER CODE END W1_UsageFault_IRQn 0 */
   }
 }
@@ -218,20 +246,6 @@ void DMA1_Channel1_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles DMA1 channel2 global interrupt.
-  */
-void DMA1_Channel2_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA1_Channel2_IRQn 0 */
-
-  /* USER CODE END DMA1_Channel2_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_adc1);
-  /* USER CODE BEGIN DMA1_Channel2_IRQn 1 */
-
-  /* USER CODE END DMA1_Channel2_IRQn 1 */
-}
-
-/**
   * @brief This function handles DMA1 channel3 global interrupt.
   */
 void DMA1_Channel3_IRQHandler(void)
@@ -272,6 +286,20 @@ void USB_LP_IRQHandler(void)
   /* USER CODE BEGIN USB_LP_IRQn 1 */
 
   /* USER CODE END USB_LP_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM6 global interrupt, DAC1 and DAC3 channel underrun error interrupts.
+  */
+void TIM6_DAC_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM6_DAC_IRQn 0 */
+
+  /* USER CODE END TIM6_DAC_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim6);
+  /* USER CODE BEGIN TIM6_DAC_IRQn 1 */
+
+  /* USER CODE END TIM6_DAC_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

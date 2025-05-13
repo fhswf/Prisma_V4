@@ -23,17 +23,18 @@
 #include "foc.h"
 #include "foc_filters.h"
 #include "foc_helpers.h"
+#include "leds.h"
 
 //*** MOTOR PARAMETERS
 
-#define PID_KP   0.3
-#define PID_KI   1.0
+#define PID_KP   0.1
+#define PID_KI   0.2
 #define PID_KD   0.0
 #define U_LIMIT  12.0
 #define SLEW_LIMIT 70.0
 
 //*** Downsample / ADC
-#define ADC_DOWNSAMPLE	10		// ADC is triggered by TIM1; Downsample 10 -> if TIM1 PWM speed is 20kHz -> ADC Sample = 2kHz
+#define ADC_DOWNSAMPLE	4		// ADC is triggered by TIM1; Downsample 10 -> if TIM1 PWM speed is 20kHz -> ADC Sample = 2kHz
 
 
 // Phase currents measured with adc2
@@ -45,8 +46,8 @@ extern TIM_HandleTypeDef htim1;					//Timer 1 -> LS FETs  for three coils
 extern TIM_HandleTypeDef htim2;					//Timer 2 -> 100kHz -> 10us for RPM calculations etc
 extern TIM_HandleTypeDef htim3;					//Timer 3 -> HS FETs  for three coils
 
-static uint16_t adc2_buf[3];
-static float adc2_off[3];
+static int16_t adc2_buf[3];
+static int16_t adc2_off[3];
 
 static int16_t pwm_ul=0, pwm_uh=0;	  // int, since we only need values <1000 and to avoid underrun when subtracting
 static int16_t pwm_vl=0, pwm_vh=0;
@@ -103,7 +104,7 @@ float current_sp  = 0.0;
 #define PWM_DEADTIME    1								// PWM Dead Time between nMOS / pMOS (time is doubled...)
 #define PWM_MAX 	    (int16_t)htim3.Instance->ARR 	// Get ARR-Value from Timer
 #define PWM_MIN         0
-#define PWM_LMT			40								// Maximum PWM allowed (to limit while testing)
+#define PWM_LMT			80								// Maximum PWM allowed (to limit while testing)
 
 #define MICROS    (htim2.Instance->CNT * 10)	// Time stamp in microseconds
 
@@ -117,6 +118,7 @@ static void foc_sync_tmr_start();
 static uint8_t foc_align_sensor();
 static void foc_fastloop();
 static void foc_write_pwm();
+static char buf[80];
 
 volatile uint32_t tcnt=0;
 uint16_t adv = 0;
@@ -137,13 +139,13 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 		return;
 	}
 
-	Iu = ( (float)adc2_buf[0] - adc2_off[0] ) * ISCALE;
-	Iv = ( (float)adc2_buf[1] - adc2_off[1] ) * ISCALE;
-	Iw = ( (float)adc2_buf[2] - adc2_off[2] ) * ISCALE;
+	Iu = (float)(adc2_buf[0] - adc2_off[0]) * ISCALE;
+	Iv = (float)(adc2_buf[1] - adc2_off[1]) * ISCALE;
+	Iw = (float)(adc2_buf[2] - adc2_off[2]) * ISCALE;
 	adv = adc2_buf[0];
 	adc2_cnt++;
 	foc_fastloop();
-	foc_write_pwm();
+	//foc_write_pwm();
 }
 
 static void foc_fastloop()
@@ -180,6 +182,7 @@ static void foc_fastloop()
 	   Vd = pid_control(-Id, &pid_curr_d);
 
 	   foc_calcPhaseVoltage(Vq, Vd, theta_e);
+	   foc_write_pwm();
     }
 }
 
@@ -240,8 +243,8 @@ void EXTI15_10_IRQHandler(void)
 void foc_init()
 {
 	uint16_t cnt=0;
-	char buf[40];
-	uint32_t lst_tick=0;
+	float s0,s1,s2;
+	uint32_t lst_tick=0, elapsed;
 	// Calibrate ADC
 	HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED);
 
@@ -249,32 +252,38 @@ void foc_init()
 	// Sync start TIM1->TIM3 and ADC Downsample
 	foc_sync_tmr_start();
 
+	display_clear();
+	display_println("Initializing FOC\r\n=>ADC Calibration");
 
+	s0 = s1 = s2 = 0.0;
+
+	elapsed = HAL_GetTick();
 	for (uint8_t i=0;i<100;i++)
 	{
-		display_println(buf);
-
 		while(adc2_cnt == cnt)
 			{
 			if (HAL_GetTick()-lst_tick>500)
 			{
-				sprintf(buf,"ADC Cal %i t %lu\r\n",i,tcnt);
+				display_gotoxy(0,2);
+				sprintf(buf,"Wait ADC Cal %i t %lu\r\n",i,tcnt);
 				display_println(buf);
 				lst_tick=HAL_GetTick();
 			}
 			};
 		cnt = adc2_cnt;
-		adc2_off[0] += (float)adc2_buf[0];
-		adc2_off[1] += (float)adc2_buf[1];
-		adc2_off[2] += (float)adc2_buf[2];
+		s0 += (float)adc2_buf[0];
+		s1 += (float)adc2_buf[1];
+		s2 += (float)adc2_buf[2];
 	}
-	adc2_off[0] /= 100.;
-	adc2_off[1] /= 100.;
-	adc2_off[2] /= 100.;
-	display_clear();
-	sprintf(buf,"ADC OFF %5.1f %5.1f %5.1f",adc2_off[0],adc2_off[1],adc2_off[2]);
+	elapsed = HAL_GetTick()-elapsed;
+	adc2_off[0] = (int16_t)(s0/100.);
+	adc2_off[1] = (int16_t)(s1/100.);
+	adc2_off[2] = (int16_t)(s2/100.);
+	display_gotoxy(0,4);
+	sprintf(buf,"ADC count: %5i -> %5u ms\r\nOffs: %4i %4i %4i",
+			adc2_cnt, (uint16_t)elapsed, adc2_off[0],adc2_off[1],adc2_off[2]);
 	display_println(buf);
-	HAL_Delay(1000);
+	HAL_Delay(2000);
 
 	// Start Timer for micros measurement
 	HAL_TIM_Base_Start(&htim2);
@@ -298,9 +307,13 @@ void foc_init()
 	pid_curr_q.lim_out = U_LIMIT;
 	pid_curr_q.lim_slew = 1e11;
 
-	foc_enabled = 1;
 	HAL_GPIO_WritePin(NSLEEP_GPIO_Port, NSLEEP_Pin, GPIO_PIN_SET);
-	foc_align_sensor();
+
+	if (foc_align_sensor()!=0)  // ERROR?
+	{
+		foc_error();
+	}
+	foc_enabled = 1;
 }
 
 static void foc_sync_tmr_start()
@@ -337,8 +350,8 @@ static void foc_sync_tmr_start()
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
 
-	HAL_TIM_Base_Start_IT(&htim1);
-
+//	HAL_TIM_Base_Start(&htim1);
+	HAL_ADC_Start_DMA(&hadc2, (uint32_t *)adc2_buf, 3);
 }
 
 void foc_disable()
@@ -346,6 +359,7 @@ void foc_disable()
 	HAL_GPIO_WritePin(NSLEEP_GPIO_Port, NSLEEP_Pin, GPIO_PIN_RESET);
 	foc_enabled = 0;
 	foc_setpwm(0,0,0);
+	foc_write_pwm();
 }
 
 /*****************************************************
@@ -556,7 +570,7 @@ float foc_getVelocity()
    }
    else
    {
-	   return direction * (M_2PI / MOTOR_CPR) / (pulse_diff / 1000000.0);
+	   return - direction * (M_2PI / MOTOR_CPR) / (pulse_diff / 1000000.0);
    }
  }
 
@@ -584,9 +598,10 @@ void foc_loop()
 void foc_test()
 {
 	float ang, vel;
-	char buf[80];
+	float inc = -5;
+	float vlim=200;
 	uint32_t ticks=0,t2=0;
-	velocity_sp = -2;
+	velocity_sp = 0;
 	current_sp = 0.1;
 	// Test Rotation
 	/*
@@ -612,10 +627,10 @@ void foc_test()
 	}*/
 	while(1)
 	{
-		foc_fastloop();
-		if (HAL_GetTick()-ticks>200)
+
+		if (HAL_GetTick()-ticks>20)
 		{
-			/*
+/*
 			ang = foc_getAngle();
 			vel = foc_getVelocity();
 			display_clear();
@@ -623,7 +638,7 @@ void foc_test()
 			display_println(buf);
 			sprintf(buf,"I: %5.1f %5.1f %5.1f",Iu*1000.,Iv*1000.,Iw*1000.);
 			display_println(buf);
-			sprintf(buf,"vel %5.1f ang %5.1f",vel,ang/DEG2RAD);
+			sprintf(buf,"vel %5.1f sp %5.1f",vel,velocity_sp);
 			display_println(buf);
 			sprintf(buf,"pgood %u",pgood_err);
 			display_println(buf);
@@ -634,10 +649,15 @@ void foc_test()
 			display_println(buf);
 			sprintf(buf,"pwm %3i %3i %3i",pwm_uh, pwm_vh, pwm_wh);
 			display_println(buf);
+*/
 
-			*/
+
 			ticks = HAL_GetTick();
-			velocity_sp += 0.2;
+			velocity_sp += inc;
+			if ((velocity_sp >vlim) || (velocity_sp<-vlim) )
+		{
+			inc = -inc;
+		}
 		}
 		if (HAL_GetTick()-t2>10)
 		{
@@ -647,11 +667,17 @@ void foc_test()
 	}
 }
 
+/**********************************************
+ *
+ * foc_align_sensor()
+ *
+ * Check if hall sensor detects correct movement
+ *
+ **********************************************/
 uint8_t foc_align_sensor() {
-	char buf[50];
    // if unknown natural direction
    display_clear();
-   display_println("Angle calibration");
+   display_println("** ANGLE CAL **");
 
    // find natural direction
    // move one electrical revolution forward
@@ -659,6 +685,7 @@ uint8_t foc_align_sensor() {
    {
 		float angle = M_3PI_2 + M_2PI * i / 500.0;
 		foc_calcPhaseVoltage(6.0, 0,  angle);
+		foc_write_pwm();
 		HAL_Delay(2);
    }
 
@@ -671,48 +698,85 @@ uint8_t foc_align_sensor() {
 	{
 		float angle = M_3PI_2 + M_2PI * i / 500.0 ;
 		foc_calcPhaseVoltage(6.0, 0,  angle);
+		foc_write_pwm();
 		HAL_Delay(2);
 	}
 	float end_angle = foc_getAngle();
 	sprintf(buf,"End: %5.2f",end_angle);
     display_println(buf);
 	foc_calcPhaseVoltage(0, 0, 0);
+	foc_write_pwm();
 	// determine the direction the sensor moved
 	if (mid_angle == end_angle)
 	{
-		display_println("NO MOVEMENT");
-		HAL_Delay(2000);
+		display_println("=> NO MOVEMENT");
 		return 1; // failed calibration
-	} else if (mid_angle < end_angle)
+	}
+	else
 	{
-	//if(monitor_port) monitor_port->println(F("MOT: sensor_direction==CCW"));
-	//sensor_direction = Direction::CCW;
-	display_println("DIR CCW");
-	sensor_direction = DIR_CCW;
-	} else{
-//	if(monitor_port) monitor_port->println(F("MOT: sensor_direction==CW"));
-//	sensor_direction = Direction::CW;
-		display_println("DIR CW");
-		sensor_direction = DIR_CW;
+		if (mid_angle < end_angle)
+		{
+			display_println("DIR: CCW");
+			sensor_direction = DIR_CCW;
+		}
+		else
+		{
+			display_println("DIR: CW");
+			sensor_direction = DIR_CW;
+		}
 	}
 	float moved =  fabs(mid_angle - end_angle);
-    if( fabs(moved*(MOTOR_CPR/6) - M_2PI) > 0.5 ) { // 0.5 is arbitrary number it can be lower or higher!
-    	sprintf(buf,"PPmvd %5.2f",moved);
+    if( fabs(moved*(MOTOR_CPR/6) - M_2PI) > 0.5 )  // 0.5 is arbitrary number it can be lower or higher!
+    {
+    	sprintf(buf,"ERR: PPmvd %5.2f",moved);
     	display_println(buf);
-    } else {
+    	return(1);
+    }
+    else
+    {
 	   display_println("CPR check ok");
    }
 
-   // zero electric angle not known
-     // align the electrical phases of the motor and sensor
-     // set angle -90(270 = 3PI/2) degrees
-     foc_calcPhaseVoltage(6.0, 0,  M_3PI_2);
-     HAL_Delay(100);
-     zero_electric_angle = normalizeAngle(sensor_direction*foc_getAngle()* MOTOR_CPR/6);
-     sprintf(buf,"ZeroAng: %5.2f",zero_electric_angle);
-     display_println(buf);
-     // stop everything
-     foc_calcPhaseVoltage(0, 0, 0);
-   HAL_Delay(1000);
-   return 0;
+	// zero electric angle not known
+	// align the electrical phases of the motor and sensor
+	// set angle -90(270 = 3PI/2) degrees
+	foc_calcPhaseVoltage(6.0, 0,  M_3PI_2);
+	foc_write_pwm();
+	HAL_Delay(100);
+	zero_electric_angle = normalizeAngle(sensor_direction*foc_getAngle()* MOTOR_CPR/6);
+	sprintf(buf,"ZeroAng: %5.2f",zero_electric_angle);
+	display_println(buf);
+	// stop everything
+	foc_calcPhaseVoltage(0, 0, 0);
+	foc_write_pwm();
+
+	HAL_Delay(1000);
+	return 0;
  }
+
+/**********************************************
+ *
+ * foc_error
+ *
+ * Halt foc and show error on display and led ring
+ *
+ **********************************************/
+void foc_error()
+{
+	uint8_t hilight=0;
+	foc_disable();
+	display_gotoxy(0,6);
+	display_println("**ERROR - SYSTEM HALTED**");
+	while(1)
+	{
+		ledring_black();
+		ledring_set_rgb( (hilight) % LEDRING_CNT,32,0,0);
+		ledring_set_rgb( (hilight+1) % LEDRING_CNT,16,0,0);
+		ledring_set_rgb( (hilight+(LEDRING_CNT-1)) % LEDRING_CNT,16,0,0);
+		ledring_set_rgb( (hilight+2) % LEDRING_CNT,8,0,0);
+		ledring_set_rgb( (hilight+(LEDRING_CNT-2)) % LEDRING_CNT,8,0,0);
+		ledring_update();
+		HAL_Delay(30);
+		hilight=(hilight+1)%LEDRING_CNT;
+	}
+}
