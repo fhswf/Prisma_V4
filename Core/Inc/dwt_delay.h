@@ -32,4 +32,5 @@ __STATIC_INLINE void dwt_delay_ms(volatile uint32_t au32_milliseconds)
   while ((DWT->CYCCNT - au32_initial_ticks) < au32_milliseconds);
 }
 
+
 #endif /* INC_DWT_DELAY_H_ */

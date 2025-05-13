@@ -1,0 +1,1 @@
+LED-Ring now working with TMR8, as TMR2 is needed for 32bit precision usec timebase

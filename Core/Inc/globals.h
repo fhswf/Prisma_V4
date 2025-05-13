@@ -20,7 +20,7 @@
 #ifndef INC_GLOBALS_H_
 #define INC_GLOBALS_H_
 
-#define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
+#define CONSTRAIN(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
 #define sgn(x)((x)<0?-1:((x)>0)?1:0)
 // #define MAIN_C  // ==> Add this in main_user.c before including
 

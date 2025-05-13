@@ -73,19 +73,19 @@ void ledring_welcome()
 	{
 		ledring_set_rgb(i,i,24-i,0);
 		ledring_update();
-		HAL_Delay(10);
+		HAL_Delay(20);
 	}
 	for (int i=0;i<24;i++)
 	{
 		ledring_set_rgb(i,24-i,0,i);
 		ledring_update();
-		HAL_Delay(10);
+		HAL_Delay(2);
 	}
 	for (int i=0;i<24;i++)
 	{
 		ledring_set_rgb(i,0,0,0);
 		ledring_update();
-		HAL_Delay(10);
+		HAL_Delay(2);
 	}
 	//HAL_TIM_Base_Start_IT(&htim4);
 }
@@ -245,8 +245,8 @@ void ledring_update(void)
 		color++;	// next led
 	}
 
-	// start DMA transfer
-	HAL_TIM_PWM_Start_DMA(&LED_TMR_DMA, LED_TMR_CH, (uint32_t *)pwm_data, 24*LEDRING_CNT+50);
+	// start DMA transfer -> LED_TMR_HAL_START_DMA is defined in leds.h depending on usage of CH or CHN
+	LED_TMR_HAL_START_DMA(&LED_TMR_DMA, LED_TMR_CH, (uint32_t *)pwm_data, 24*LEDRING_CNT+50);
 	datasentflag = 0;  // mark transfer ongoing
 }
 
@@ -254,10 +254,14 @@ void ledring_update(void)
 //Funktion die nach senden der Bytes aufgerufen wird
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 {
-	HAL_TIM_PWM_Stop_DMA(htim, LED_TMR_CH); 	//Senden/PWM wird angehalten
-	datasentflag=1;									//auf 1 gesetzt -> Nur einmalige sendung der Daten
-}
+	// stop DMA transfer -> LED_TMR_HAL_STOP_DMA is defined in leds.h depending on usage of CH or CHN
+	if (htim == &LED_TMR_DMA)
+	{
+		LED_TMR_HAL_STOP_DMA(htim, LED_TMR_CH);
+		datasentflag=1;									// set to 1 to indicate that data were send
 
+	}
+}
 
 // TIM4 ISR for periodic update of led status
 void TIM7_IRQHandler(void)

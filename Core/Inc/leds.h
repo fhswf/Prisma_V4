@@ -19,11 +19,20 @@ typedef struct
 #define DMA_NON_BLOCKING   0	// do not wait for old DMA to complete, dismiss update
 #define DMA_WAIT    	   1    // wait for DMA to complete, then send new data
 
-#define LED_TMR_DMA  htim2
-#define LED_TMR_CH   TIM_CHANNEL_2
+#define LED_TMR_DMA  htim8
+#define LED_TMR_CH   TIM_CHANNEL_1
+#define LED_TMR_USE_CHN
 #define LED_TMR_UPD  htim7
 
 #define RGB(a,b,c)  {c,a,b}
+
+#ifdef LED_TMR_USE_CHN
+#define LED_TMR_HAL_START_DMA	 HAL_TIMEx_PWMN_Start_DMA    // Use these if inverted output (CHN) is used!
+#define LED_TMR_HAL_STOP_DMA	 HAL_TIMEx_PWMN_Stop_DMA
+#else
+#define LED_TMR_HAL_START_DMA	 HAL_TIM_PWM_Start_DMA
+#define LED_TMR_HAL_STOP_DMA	 HAL_TIM_PWM_Start_DMA
+#endif
 
 void ledring_init(uint8_t mode);
 void ledring_set_rgb(uint8_t, uint8_t,uint8_t,uint8_t);

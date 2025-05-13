@@ -10,6 +10,8 @@
 
 #include <stdint.h>
 
+#include "bmi088g_defs.h"
+
 #ifndef BMI088_ENABLE
  	#define BMI088_ENABLE 1
 	#define BMI088_DISABLE 0

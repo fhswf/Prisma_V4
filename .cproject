@@ -84,7 +84,7 @@
 					</folderInfo>
 					<sourceEntries>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="USB_Device"/>
-						<entry excluding="Src/read_sensor_data.c|Src/bmi08xa.c|Src/bmi08iface.c|Src/bmi08g.c|Src/bmi08a.c|Src/bmi088ard.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
+						<entry excluding="Src/bldc.c|Src/touch.c|Src/read_sensor_data.c|Src/bmi08xa.c|Src/bmi08iface.c|Src/bmi08g.c|Src/bmi08a.c|Src/bmi088ard.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Middlewares"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
 					</sourceEntries>
@@ -166,7 +166,7 @@
 					</folderInfo>
 					<sourceEntries>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="USB_Device"/>
-						<entry excluding="Src/read_sensor_data.c|Src/bmi08xa.c|Src/bmi08iface.c|Src/bmi08g.c|Src/bmi08a.c|Src/bmi088ard.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
+						<entry excluding="Src/bldc.c|Src/touch.c|Src/read_sensor_data.c|Src/bmi08xa.c|Src/bmi08iface.c|Src/bmi08g.c|Src/bmi08a.c|Src/bmi088ard.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Middlewares"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
 					</sourceEntries>

@@ -12,8 +12,12 @@
 #include "main.h"
 #include "dwt_delay.h"
 
+static uint8_t dwt_running = 0;
+
 uint32_t dwt_delay_init(void)
 {
+	if (dwt_running) return;
+
     /* Disable TRC */
     CoreDebug->DEMCR &= ~CoreDebug_DEMCR_TRCENA_Msk; // ~0x01000000;
     /* Enable TRC */
@@ -35,6 +39,7 @@ uint32_t dwt_delay_init(void)
     /* Check if clock cycle counter has started */
     if(DWT->CYCCNT)
     {
+       dwt_running = 1;
        return 0; /*clock cycle counter started*/
     }
     else
@@ -42,4 +47,3 @@ uint32_t dwt_delay_init(void)
       return 1; /*clock cycle counter not started*/
     }
 }
-

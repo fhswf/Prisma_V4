@@ -65,6 +65,8 @@ void Error_Handler(void);
 #define SO_B_GPIO_Port GPIOC
 #define SO_C_Pin GPIO_PIN_2
 #define SO_C_GPIO_Port GPIOC
+#define TOUCHREF_Pin GPIO_PIN_3
+#define TOUCHREF_GPIO_Port GPIOC
 #define BTN0_Pin GPIO_PIN_0
 #define BTN0_GPIO_Port GPIOA
 #define BTN1_Pin GPIO_PIN_1
@@ -73,10 +75,12 @@ void Error_Handler(void);
 #define BTN2_GPIO_Port GPIOA
 #define DISP_CS_Pin GPIO_PIN_4
 #define DISP_CS_GPIO_Port GPIOA
-#define BMI08_INT1_Pin GPIO_PIN_5
-#define BMI08_INT1_GPIO_Port GPIOA
-#define BMI08_INT3_Pin GPIO_PIN_6
-#define BMI08_INT3_GPIO_Port GPIOA
+#define BMI088_INT1_Pin GPIO_PIN_5
+#define BMI088_INT1_GPIO_Port GPIOA
+#define BMI088_INT1_EXTI_IRQn EXTI9_5_IRQn
+#define BMI088_INT3_Pin GPIO_PIN_6
+#define BMI088_INT3_GPIO_Port GPIOA
+#define BMI088_INT3_EXTI_IRQn EXTI9_5_IRQn
 #define DISP_ON_Pin GPIO_PIN_7
 #define DISP_ON_GPIO_Port GPIOA
 #define BT_TX_Pin GPIO_PIN_4
@@ -91,6 +95,7 @@ void Error_Handler(void);
 #define DISP_RST_GPIO_Port GPIOB
 #define MOT_PGOOD_Pin GPIO_PIN_10
 #define MOT_PGOOD_GPIO_Port GPIOB
+#define MOT_PGOOD_EXTI_IRQn EXTI15_10_IRQn
 #define NFAULT_Pin GPIO_PIN_11
 #define NFAULT_GPIO_Port GPIOB
 #define NSLEEP_Pin GPIO_PIN_12
@@ -124,6 +129,8 @@ void Error_Handler(void);
 #define DISP_MOSI_GPIO_Port GPIOC
 #define DISP_DC_Pin GPIO_PIN_2
 #define DISP_DC_GPIO_Port GPIOD
+#define NEOPXL1_Pin GPIO_PIN_3
+#define NEOPXL1_GPIO_Port GPIOB
 #define LED2_Pin GPIO_PIN_4
 #define LED2_GPIO_Port GPIOB
 #define LED1_Pin GPIO_PIN_5

@@ -115,7 +115,7 @@ uint8_t bmi088a_init()
   }
   HAL_Delay(5);
   /* set default ODR */
-  if (bmi088a_setOdr(ACC_ODR_1600HZ_BW_280HZ)) {
+  if (bmi088a_setOdr(ACC_ODR_400HZ_BW_145HZ)) {
     return  8;
   }
   /* check config errors */
@@ -126,6 +126,9 @@ uint8_t bmi088a_init()
   if (bmi088a_isFatalErr()) {
     return  10;
   }
+  HAL_Delay(2);
+
+
   return 0;
 }
 
