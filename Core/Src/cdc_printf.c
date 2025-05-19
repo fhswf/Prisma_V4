@@ -7,6 +7,7 @@
 
 #include "main.h"
 #include "usbd_cdc_if.h"
+#include "uart.h"
 
 #define CDC_BLOCKING
 
@@ -14,7 +15,10 @@ int _write(int file, char *ptr, int len) {
     static uint8_t rc = USBD_OK;
     uint16_t timeout = 300;	/* milliseconds */
     static uint8_t was_timeout = 0;
-
+    for (int i=0;i<len;i++)
+    {
+    	uart_bt_putc(ptr[i]);
+    }
     if (HAL_GPIO_ReadPin(USB_PWRD_GPIO_Port, USB_PWRD_Pin) == 0) // No USB connected
     {
     	return 0;

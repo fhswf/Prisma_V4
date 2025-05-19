@@ -22,11 +22,10 @@
 /***** TIMER Usage *****
  *
  *  TIM1  - Motor PWM
+ *  TIM3  - Motor PWM (sync'ed to TIM1)
  *  TIM2  - Timebase for Microsecond measurement, running at 100 kHz -> 10us
  *          32 Bit Timer -> 2^32 / 100 kHz -> Overflow after 11 hours
- *  TIM3  - Motor PWM
  *  TIM8  - NeoPixel PWM/DMA LED
- *  TIM6 - 100Hz control loop (and optionally LED1 dimming)
  */
 
 //Lorem
@@ -67,8 +66,7 @@ void main_user(void)
 	HAL_Delay(100);
 	printf("UART Initialized done\r\n");
 	// Init Bluetooth
-	//bt_init();
-    //adc_init();
+	bt_init();
 
 	ledring_init(DMA_NON_BLOCKING);
     ledring_welcome();
@@ -107,11 +105,5 @@ void main_user(void)
 		//ledring_set_rgb(4,125,52,148);
 		HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
 		HAL_Delay(500);
-	}
-	bldc_init();
-
-	while(1)
-	{
-
 	}
 }

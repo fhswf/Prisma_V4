@@ -35,7 +35,7 @@
 
 //*** Downsample / ADC
 #define ADC_DOWNSAMPLE	4		// ADC is triggered by TIM1; Downsample 10 -> if TIM1 PWM speed is 20kHz -> ADC Sample = 2kHz
-
+#define ADC_CAL_RUNS    1000     // How much ADC samples used for calibrating zero current
 
 // Phase currents measured with adc2
 extern ADC_HandleTypeDef hadc2;
@@ -104,11 +104,11 @@ float current_sp  = 0.0;
 #define PWM_DEADTIME    1								// PWM Dead Time between nMOS / pMOS (time is doubled...)
 #define PWM_MAX 	    (int16_t)htim3.Instance->ARR 	// Get ARR-Value from Timer
 #define PWM_MIN         0
-#define PWM_LMT			80								// Maximum PWM allowed (to limit while testing)
+#define PWM_LMT			90								// Maximum PWM allowed (to limit while testing)
 
 #define MICROS    (htim2.Instance->CNT * 10)	// Time stamp in microseconds
 
-
+#define SNS_ALIGN_FORCE 2.0			// Voltage used in sensor align
 const int8_t ELECTRIC_SECTORS [8] = { -1, 0, 4, 5, 2, 1, 3 , -1 };	// in simpleFOC they count from 0 ...
 
 /**** Private Function Prototypes ****/
@@ -142,7 +142,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 	Iu = (float)(adc2_buf[0] - adc2_off[0]) * ISCALE;
 	Iv = (float)(adc2_buf[1] - adc2_off[1]) * ISCALE;
 	Iw = (float)(adc2_buf[2] - adc2_off[2]) * ISCALE;
-	adv = adc2_buf[0];
 	adc2_cnt++;
 	foc_fastloop();
 	//foc_write_pwm();
@@ -243,7 +242,7 @@ void EXTI15_10_IRQHandler(void)
 void foc_init()
 {
 	uint16_t cnt=0;
-	float s0,s1,s2;
+	float s0,s1,s2, fs;
 	uint32_t lst_tick=0, elapsed;
 	// Calibrate ADC
 	HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED);
@@ -252,16 +251,22 @@ void foc_init()
 	// Sync start TIM1->TIM3 and ADC Downsample
 	foc_sync_tmr_start();
 
+	// Start Timer for micros measurement
+	HAL_TIM_Base_Start(&htim2);
+
+
 	display_clear();
 	display_println("Initializing FOC\r\n=>ADC Calibration");
 
 	s0 = s1 = s2 = 0.0;
 
-	elapsed = HAL_GetTick();
-	for (uint8_t i=0;i<100;i++)
+	elapsed = MICROS;
+	cnt = adc2_cnt;
+
+	for (uint16_t i=0;i<ADC_CAL_RUNS;i++)
 	{
 		while(adc2_cnt == cnt)
-			{
+		{
 			if (HAL_GetTick()-lst_tick>500)
 			{
 				display_gotoxy(0,2);
@@ -269,24 +274,25 @@ void foc_init()
 				display_println(buf);
 				lst_tick=HAL_GetTick();
 			}
-			};
+		}
 		cnt = adc2_cnt;
 		s0 += (float)adc2_buf[0];
 		s1 += (float)adc2_buf[1];
 		s2 += (float)adc2_buf[2];
 	}
-	elapsed = HAL_GetTick()-elapsed;
-	adc2_off[0] = (int16_t)(s0/100.);
-	adc2_off[1] = (int16_t)(s1/100.);
-	adc2_off[2] = (int16_t)(s2/100.);
+	// Calculate ADC sampling rate
+	elapsed = MICROS-elapsed;
+	fs = 1000. / elapsed * ADC_CAL_RUNS ;	// 1000. -> value in kHz
+	adc2_off[0] = (int16_t)(s0/(float)ADC_CAL_RUNS);
+	adc2_off[1] = (int16_t)(s1/(float)ADC_CAL_RUNS);
+	adc2_off[2] = (int16_t)(s2/(float)ADC_CAL_RUNS);
 	display_gotoxy(0,4);
-	sprintf(buf,"ADC count: %5i -> %5u ms\r\nOffs: %4i %4i %4i",
-			adc2_cnt, (uint16_t)elapsed, adc2_off[0],adc2_off[1],adc2_off[2]);
+	sprintf(buf,"ADC fs=%6.2f kHz (%lu)\r\nOffs: %4i %4i %4i",
+			fs, elapsed,
+			adc2_off[0],adc2_off[1],adc2_off[2]);
 	display_println(buf);
 	HAL_Delay(2000);
 
-	// Start Timer for micros measurement
-	HAL_TIM_Base_Start(&htim2);
 
 	// Init PID
 	pid_velocity.KP = PID_KP;
@@ -412,7 +418,7 @@ static void foc_calcPhaseVoltage(float Uq, float Ud, float angle_el)
 	{
 	    // _sqrt is an approx of sqrt (3-4% error)
         Uout = fast_sqrt(Uq*Uq+Ud*Ud) / U_LIMIT;
-		angle_el = normalizeAngle(angle_el + ( (Uq==0.0)?.0:atan2f(Uq, Ud) ));
+		angle_el = normalizeAngle(angle_el + fast_atan2(Uq, Ud) ); //( (Uq==0.0)?.0:atan2f(Uq, Ud) ));
 	}
 	else
 	{
@@ -674,6 +680,8 @@ void foc_test()
  * Check if hall sensor detects correct movement
  *
  **********************************************/
+
+
 uint8_t foc_align_sensor() {
    // if unknown natural direction
    display_clear();
@@ -684,7 +692,7 @@ uint8_t foc_align_sensor() {
    for (int i = 0; i <=500; i+=5 )
    {
 		float angle = M_3PI_2 + M_2PI * i / 500.0;
-		foc_calcPhaseVoltage(6.0, 0,  angle);
+		foc_calcPhaseVoltage(SNS_ALIGN_FORCE, 0,  angle);
 		foc_write_pwm();
 		HAL_Delay(2);
    }
@@ -697,7 +705,7 @@ uint8_t foc_align_sensor() {
 	for (int i = 500; i >=0; i-=5 )
 	{
 		float angle = M_3PI_2 + M_2PI * i / 500.0 ;
-		foc_calcPhaseVoltage(6.0, 0,  angle);
+		foc_calcPhaseVoltage(SNS_ALIGN_FORCE, 0,  angle);
 		foc_write_pwm();
 		HAL_Delay(2);
 	}
@@ -740,7 +748,7 @@ uint8_t foc_align_sensor() {
 	// zero electric angle not known
 	// align the electrical phases of the motor and sensor
 	// set angle -90(270 = 3PI/2) degrees
-	foc_calcPhaseVoltage(6.0, 0,  M_3PI_2);
+	foc_calcPhaseVoltage(SNS_ALIGN_FORCE, 0,  M_3PI_2);
 	foc_write_pwm();
 	HAL_Delay(100);
 	zero_electric_angle = normalizeAngle(sensor_direction*foc_getAngle()* MOTOR_CPR/6);
@@ -764,10 +772,11 @@ uint8_t foc_align_sensor() {
 void foc_error()
 {
 	uint8_t hilight=0;
+	uint8_t resume=48;
 	foc_disable();
 	display_gotoxy(0,6);
 	display_println("**ERROR - SYSTEM HALTED**");
-	while(1)
+	while(resume--)
 	{
 		ledring_black();
 		ledring_set_rgb( (hilight) % LEDRING_CNT,32,0,0);
